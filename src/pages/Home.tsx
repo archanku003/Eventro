@@ -149,7 +149,7 @@ const Home = () => {
               Ready to Transform Your College Experience?
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8">
-              Join thousands of students who are already using EventHub to
+              Join thousands of students who are already using Eventro to
               discover, register, and participate in amazing college events.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -246,7 +246,7 @@ const Home = () => {
             <div className="container mx-auto px-4">
               <div className="text-center mb-12">
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                  Why Choose EventHub?
+                  Why Choose Eventro?
                 </h2>
                 <p className="text-muted-foreground max-w-2xl mx-auto">
                   Everything you need to stay connected with campus events
@@ -296,7 +296,7 @@ const Home = () => {
                   Start Your Journey Today
                 </h2>
                 <p className="text-lg mb-6 opacity-90">
-                  Don't miss out on the best college events. Join EventHub now!
+                  Don't miss out on the best college events. Join Eventro now!
                 </p>
                 <Link to="/signup">
                   <Button

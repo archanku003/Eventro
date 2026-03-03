@@ -67,7 +67,7 @@ const Header = () => {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-hero">
               <Calendar className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">EventHub</span>
+            <span className="text-xl font-bold">Eventro</span>
           </Link>
 
           {/* Navigation */}

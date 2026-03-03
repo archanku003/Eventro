@@ -5,7 +5,19 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+// DEBUG: log runtime env used by the client (visible in browser console)
+if (typeof window !== 'undefined') {
+  try {
+    // eslint-disable-next-line no-console
+    console.log('[DEBUG] VITE_SUPABASE_URL:', SUPABASE_URL);
+    // eslint-disable-next-line no-console
+    console.log('[DEBUG] VITE_SUPABASE_PUBLISHABLE_KEY present:', !!SUPABASE_PUBLISHABLE_KEY);
+  } catch (e) {
+    // ignore logging failures
+  }
+}
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export const supabase = createClient<Database>(SUPABASE_URL as string, SUPABASE_PUBLISHABLE_KEY as string);

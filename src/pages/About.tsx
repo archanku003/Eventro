@@ -13,7 +13,7 @@ const About = () => {
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center text-primary-foreground">
               <h1 className="text-4xl md:text-5xl font-bold mb-6">
-                About EventHub
+                About Eventro
               </h1>
               <p className="text-lg opacity-90">
                 Revolutionizing college event management and student engagement
@@ -31,7 +31,7 @@ const About = () => {
                 Our Mission
               </h2>
               <p className="text-lg text-muted-foreground text-center mb-12">
-                EventHub is dedicated to transforming the college experience by
+                Eventro is dedicated to transforming the college experience by
                 providing a comprehensive platform for event discovery,
                 registration, and management. We believe that campus events are
                 crucial for student development, networking, and creating

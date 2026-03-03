@@ -1,6 +1,6 @@
-# EventHub — College Event Management System
+# Eventro — College Event Management System
 
-EventHub is a self-hostable web application for managing college events: discovery, registration, QR ticketing, and administrative management. It is implemented as a modern TypeScript + React single-page application (SPA) and uses Supabase for authentication and Postgres storage. The project is packaged for containerized deployment (Docker + Nginx).
+Eventro is a self-hostable web application for managing college events: discovery, registration, QR ticketing, and administrative management. It is implemented as a modern TypeScript + React single-page application (SPA) and uses Supabase for authentication and Postgres storage. The project is packaged for containerized deployment (Docker + Nginx).
 
 ---
 
@@ -26,7 +26,7 @@ EventHub is a self-hostable web application for managing college events: discove
 
 ## Overview
 
-EventHub centralizes campus event workflows into a single platform that supports:
+Eventro centralizes campus event workflows into a single platform that supports:
 
 - Event listing and discovery with status badges (today, tomorrow, upcoming, ongoing, completed).
 - Secure user authentication and role-aware experiences (admins vs students vs guests).
@@ -152,7 +152,7 @@ docker compose down
 
 ## Supabase setup & Database schema
 
-EventHub uses Supabase (Postgres) for authentication and data storage. The repo includes generated types at `src/integrations/supabase/types.ts` which reflect the following key tables:
+Eventro uses Supabase (Postgres) for authentication and data storage. The repo includes generated types at `src/integrations/supabase/types.ts` which reflect the following key tables:
 
 - `users` — `{ id, email, name, role, created_at }`
 - `events` — `{ id, title, date, time, end_time, description, location, type, university_name, created_by, created_at }`

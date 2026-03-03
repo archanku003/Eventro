@@ -80,7 +80,7 @@ const Signup = () => {
 
     toast({
       title: "Account Created!",
-      description: "Welcome to EventHub",
+      description: "Welcome to Eventro",
     });
     navigate(redirectTo);
   };
@@ -93,7 +93,7 @@ const Signup = () => {
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-hero">
             <Calendar className="h-7 w-7 text-primary-foreground" />
           </div>
-          <span className="text-2xl font-bold">EventHub</span>
+          <span className="text-2xl font-bold">Eventro</span>
         </Link>
 
         {/* Signup Card */}
@@ -101,7 +101,7 @@ const Signup = () => {
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold mb-2">Create Account</h1>
             <p className="text-muted-foreground">
-              Join thousands of students on EventHub
+              Join thousands of students on Eventro
             </p>
           </div>
 

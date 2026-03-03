@@ -53,13 +53,13 @@ const Footer = () => {
       <div className="container mx-auto px-4 py-12">
         {isAdmin ? (
           <div className="text-center">
-            <span className="text-xl font-bold">EventHub</span>
+            <span className="text-xl font-bold">Eventro</span>
             <p className="text-muted-foreground mt-2 mb-0">
               Admin Panel
             </p>
             <div className="border-t border-border mt-8 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
               <p className="text-muted-foreground text-sm">
-                © 2025 EventHub College Event Management System. All rights reserved.
+                © 2025 Eventro College Event Management System. All rights reserved.
               </p>
             </div>
           </div>
@@ -72,7 +72,7 @@ const Footer = () => {
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-hero">
                     <Calendar className="h-6 w-6 text-primary-foreground" />
                   </div>
-                  <span className="text-xl font-bold">EventHub</span>
+                  <span className="text-xl font-bold">Eventro</span>
                 </div>
                 <p className="text-muted-foreground mb-4">
                   Your comprehensive platform for managing and discovering college events. Join thousands of students in creating memorable experiences.
@@ -139,7 +139,7 @@ const Footer = () => {
                   </li>
                   <li className="flex items-center gap-2 text-muted-foreground">
                     <Mail className="h-5 w-5 flex-shrink-0" />
-                    <span>info@eventhub.edu</span>
+                    <span>info@eventro.edu</span>
                   </li>
                 </ul>
               </div>
@@ -147,7 +147,7 @@ const Footer = () => {
             {/* Bottom Footer */}
             <div className="border-t border-border mt-8 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
               <p className="text-muted-foreground text-sm">
-                © 2025 EventHub College Event Management System. All rights reserved.
+                © 2025 Eventro College Event Management System. All rights reserved.
               </p>
             </div>
           </>

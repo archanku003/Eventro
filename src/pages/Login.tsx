@@ -80,7 +80,7 @@ const Login = () => {
                     <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-hero">
                         <Calendar className="h-7 w-7 text-primary-foreground" />
                     </div>
-                    <span className="text-2xl font-bold">EventHub</span>
+                    <span className="text-2xl font-bold">Eventro</span>
                 </Link>
 
                 {/* Login Card */}

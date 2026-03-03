@@ -108,7 +108,7 @@ export default function StudentRegistration({ open, setOpen, eventName, onRegist
         // Fallback: if no server metadata, try reading localStorage (guest flow)
         if (!saved_roll && !saved_email) {
           try {
-            const raw = localStorage.getItem("eventhub_saved_contact");
+            const raw = localStorage.getItem("eventro_saved_contact");
             if (raw) {
               const parsed = JSON.parse(raw);
               saved_roll = saved_roll || parsed?.roll || "";
@@ -211,9 +211,9 @@ export default function StudentRegistration({ open, setOpen, eventName, onRegist
             await supabase.auth.updateUser({ data: { saved_roll: null, saved_email: null } as any });
           } else {
             if (useSaved) {
-              localStorage.setItem("eventhub_saved_contact", JSON.stringify({ roll: form.roll_number, email: form.email }));
+              localStorage.setItem("eventro_saved_contact", JSON.stringify({ roll: form.roll_number, email: form.email }));
             } else {
-              localStorage.removeItem("eventhub_saved_contact");
+              localStorage.removeItem("eventro_saved_contact");
             }
           }
         } catch (e) {
