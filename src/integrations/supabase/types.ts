@@ -67,18 +67,27 @@ export type Database = {
       registrations: {
         Row: {
           event_id: string | null
+          ticket_id: string | null
+          ticket_qr: string | null
+          ticket_issued_at: string | null
           id: string
           registered_at: string | null
           user_id: string | null
         }
         Insert: {
           event_id?: string | null
+          ticket_id?: string | null
+          ticket_qr?: string | null
+          ticket_issued_at?: string | null
           id?: string
           registered_at?: string | null
           user_id?: string | null
         }
         Update: {
           event_id?: string | null
+          ticket_id?: string | null
+          ticket_qr?: string | null
+          ticket_issued_at?: string | null
           id?: string
           registered_at?: string | null
           user_id?: string | null
