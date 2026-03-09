@@ -70,27 +70,48 @@ export type Database = {
           ticket_id: string | null
           ticket_qr: string | null
           ticket_issued_at: string | null
+          attended: boolean | null
+          attended_at: string | null
           id: string
           registered_at: string | null
           user_id: string | null
+          name: string | null
+          email: string | null
+          mobile: string | null
+          roll_number: string | null
+          course: string | null
         }
         Insert: {
           event_id?: string | null
           ticket_id?: string | null
           ticket_qr?: string | null
           ticket_issued_at?: string | null
+          attended?: boolean | null
+          attended_at?: string | null
           id?: string
           registered_at?: string | null
           user_id?: string | null
+          name?: string | null
+          email?: string | null
+          mobile?: string | null
+          roll_number?: string | null
+          course?: string | null
         }
         Update: {
           event_id?: string | null
           ticket_id?: string | null
           ticket_qr?: string | null
           ticket_issued_at?: string | null
+          attended?: boolean | null
+          attended_at?: string | null
           id?: string
           registered_at?: string | null
           user_id?: string | null
+          name?: string | null
+          email?: string | null
+          mobile?: string | null
+          roll_number?: string | null
+          course?: string | null
         }
         Relationships: [
           {

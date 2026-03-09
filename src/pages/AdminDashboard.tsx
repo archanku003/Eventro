@@ -29,6 +29,7 @@ function formatTimeRange(start: string, end: string) {
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -67,6 +68,7 @@ const AdminDashboard = () => {
     university_name: "",
     image: null,
   });
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -118,9 +120,17 @@ const AdminDashboard = () => {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold mb-6">Admin Event Management</h1>
-        <Button onClick={() => setAddOpen(true)} className="mb-6 bg-gradient-hero">
-          Add Event
-        </Button>
+        <div className="mb-6 flex gap-3">
+          <Button onClick={() => setAddOpen(true)} className="bg-gradient-hero">
+            Add Event
+          </Button>
+          <Button onClick={() => navigate("/admin-scanner")} className="bg-sky-600 text-white">
+            Scan QR
+          </Button>
+          <Button onClick={() => navigate("/attendees")} className="bg-emerald-600 text-white">
+            Attendees
+          </Button>
+        </div>
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
           <DialogContent>
             <DialogHeader>

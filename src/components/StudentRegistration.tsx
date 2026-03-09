@@ -34,7 +34,7 @@ type Props = {
   open: boolean;
   setOpen: (open: boolean) => void;
   eventName?: string;
-  onRegistered?: () => void; // called after student upsert succeeds (e.g., to register for the event)
+  onRegistered?: (student?: any) => void; // called after student upsert succeeds (passes saved student data)
   firstTimeUser?: boolean;
 };
 
@@ -198,8 +198,6 @@ export default function StudentRegistration({ open, setOpen, eventName, onRegist
         toast && toast({ title: "Save failed", description: error.message, variant: "destructive" });
       } else {
         toast && toast({ title: "Saved", description: "Your student details were saved." });
-        // call parent callback to continue registration to event if needed
-        onRegistered && onRegistered();
         // persist roll/email in user metadata when logged in, else fallback to localStorage
         try {
           const { data } = await supabase.auth.getUser();
@@ -219,6 +217,16 @@ export default function StudentRegistration({ open, setOpen, eventName, onRegist
         } catch (e) {
           // ignore persistence errors
         }
+        // call parent callback to continue registration to event if needed
+        const savedStudent = {
+          roll_number: form.roll_number,
+          name: form.name,
+          email: form.email,
+          mobile: form.mobile,
+          course: form.course,
+          year: form.year,
+        };
+        onRegistered && onRegistered(savedStudent);
         setOpen(false);
       }
     } catch (err: any) {

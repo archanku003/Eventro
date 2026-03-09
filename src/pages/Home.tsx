@@ -219,7 +219,7 @@ const Home = () => {
                       image={event.image || ""}
                       status={getEventStatus(event.date)}
                       description={event.description}
-                      onRegister={() => handleRegister(event.id)}
+                      onRegister={(student) => { void handleRegister(event.id, student); }}
                       isRegistered={registrations.includes(event.id)}
                       isFirstTime={registrations.length === 0}
                       onCancel={() => handleCancel(event.id)}

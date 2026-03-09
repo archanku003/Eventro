@@ -76,7 +76,7 @@ type EventCardProps = {
   status: string;
   description?: string;
   end_time?: string;
-  onRegister?: () => void;
+  onRegister?: (student?: any) => void;
   onCancel?: () => void;
   isRegistered?: boolean;
   isFirstTime?: boolean;
@@ -85,6 +85,7 @@ type EventCardProps = {
   onUpdate?: (editEvent: any, closeDialog: () => void) => void;
   ticketQr?: string | null;
   ticketId?: string | null;
+  attended?: boolean;
 };
 
 const EventCard: React.FC<EventCardProps> = ({
@@ -107,6 +108,7 @@ const EventCard: React.FC<EventCardProps> = ({
   onUpdate,
   ticketQr,
   ticketId,
+  attended,
 }) => {
   // Dialog state
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -307,9 +309,9 @@ const EventCard: React.FC<EventCardProps> = ({
                         setOpen={setStudentRegOpen}
                         eventName={name}
                         firstTimeUser={isFirstTime}
-                        onRegistered={() => {
+                        onRegistered={(student) => {
                           // after successful student save, continue with event registration
-                          onRegister && onRegister();
+                          onRegister && onRegister(student);
                         }}
                       />
                     </>
@@ -500,42 +502,48 @@ const EventCard: React.FC<EventCardProps> = ({
             </div>
 
             {isRegistered && (
-              (ticketQr || ticketId) ? (
-                <div className="mt-3">
-                  <Button
-                    className="w-full bg-gradient-hero"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowTicket(true);
-                    }}
-                  >
-                    View Ticket
-                  </Button>
-
-                  <Dialog open={showTicket} onOpenChange={setShowTicket}>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Your Ticket</DialogTitle>
-                        <DialogDescription>Show this QR at check-in.</DialogDescription>
-                      </DialogHeader>
-                      <div className="flex flex-col items-center gap-3">
-                        {ticketQr ? (
-                          <img src={ticketQr} alt="Ticket QR" className="w-64 h-64 object-contain" />
-                        ) : (
-                          <div className="text-sm text-muted-foreground">Ticket not available</div>
-                        )}
-                        {ticketId && <div className="text-xs text-muted-foreground">Ticket ID: {ticketId}</div>}
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+              attended ? (
+                <div className="mt-3 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 text-center">
+                  Attendance Marked
                 </div>
               ) : (
-                <div className="mt-3">
-                  <Button className="w-full opacity-60 cursor-not-allowed" disabled>
-                    Ticket pending
-                  </Button>
-                  <div className="text-xs text-muted-foreground mt-2">Ticket is being generated — check back shortly.</div>
-                </div>
+                (ticketQr || ticketId) ? (
+                  <div className="mt-3">
+                    <Button
+                      className="w-full bg-gradient-hero"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowTicket(true);
+                      }}
+                    >
+                      View Ticket
+                    </Button>
+
+                    <Dialog open={showTicket} onOpenChange={setShowTicket}>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Your Ticket</DialogTitle>
+                          <DialogDescription>Show this QR at check-in.</DialogDescription>
+                        </DialogHeader>
+                        <div className="flex flex-col items-center gap-3">
+                          {ticketQr ? (
+                            <img src={ticketQr} alt="Ticket QR" className="w-64 h-64 object-contain" />
+                          ) : (
+                            <div className="text-sm text-muted-foreground">Ticket not available</div>
+                          )}
+                          {ticketId && <div className="text-xs text-muted-foreground">Ticket ID: {ticketId}</div>}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <Button className="w-full opacity-60 cursor-not-allowed" disabled>
+                      Ticket pending
+                    </Button>
+                    <div className="text-xs text-muted-foreground mt-2">Ticket is being generated — check back shortly.</div>
+                  </div>
+                )
               )
             )}
           </div>
@@ -609,8 +617,8 @@ const EventCard: React.FC<EventCardProps> = ({
                       open={studentRegOpen}
                       setOpen={setStudentRegOpen}
                       eventName={name}
-                      onRegistered={() => {
-                        onRegister && onRegister();
+                      onRegistered={(student) => {
+                        onRegister && onRegister(student);
                       }}
                     />
                   </>

@@ -71,25 +71,39 @@ const Events = () => {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [registrations, setRegistrations] = useState<string[]>([]); // event ids
+  const [registrations, setRegistrations] = useState<Record<string, { ticket_id?: string | null; ticket_qr?: string | null; attended?: boolean }>>({}); // map by event id
   const { toast } = useToast();
   // Fetch registrations for logged-in user
   useEffect(() => {
     const fetchRegistrations = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data, error } = await supabase.from("registrations").select("event_id").eq("user_id", user.id);
+        const { data, error } = await supabase
+          .from("registrations")
+          .select("event_id, ticket_id, ticket_qr, attended")
+          .eq("user_id", user.id);
         if (!error && data) {
-          setRegistrations((data as { event_id: string }[]).map((r) => r.event_id));
+          const map: Record<string, any> = {};
+          (data as any[]).forEach((r) => {
+            if (r && r.event_id) map[r.event_id] = { ticket_id: r.ticket_id, ticket_qr: r.ticket_qr, attended: !!r.attended };
+          });
+          setRegistrations(map);
         }
       } else {
-        setRegistrations([]);
+        setRegistrations({});
       }
     };
     fetchRegistrations();
+    // Listen for registration changes triggered elsewhere (registration, backfill, scanner)
+    const handler = () => {
+      // always refresh to keep local cache in sync
+      fetchRegistrations();
+    };
+    window.addEventListener("registrations:changed", handler as EventListener);
+    return () => window.removeEventListener("registrations:changed", handler as EventListener);
   }, []);
   // Registration handler
-  const handleRegister = async (eventId: string) => {
+  const handleRegister = async (eventId: string, studentData?: any) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast({ title: "Please log in to register for events." });
@@ -118,26 +132,91 @@ const Events = () => {
     }
 
     // Insert and return the inserted registration so we can confirm ticket fields are stored
-    const { data: inserted, error: insertError } = await supabase
-      .from("registrations")
-      .insert([
-        {
-          user_id: user.id,
-          event_id: eventId,
-          ticket_id: ticketId,
-          ticket_qr: qrDataUrl,
-          ticket_issued_at: new Date().toISOString(),
-        },
-      ])
-      .select()
-      .single();
+    // Prefer studentData passed from the registration dialog (saved immediately before calling onRegistered)
+    let studentFields: Record<string, any> = {};
+    if (studentData) {
+      studentFields = {
+        name: studentData.name,
+        email: studentData.email,
+        mobile: studentData.mobile,
+        roll_number: studentData.roll_number,
+        course: studentData.course,
+      };
+    } else {
+      // Try to fetch student info (if available) to store with registration
+      try {
+        const meta: any = (user as any)?.user_metadata ?? {};
+        const saved_roll = meta?.saved_roll;
+        const saved_email = meta?.saved_email || user.email;
+        if (saved_roll || saved_email) {
+          const q = [] as string[];
+          if (saved_roll) q.push(`roll_number.eq.${saved_roll}`);
+          if (saved_email) q.push(`email.eq.${saved_email}`);
+          const orClause = q.join(",");
+          const { data: stud } = await supabase.from("students").select("*").or(orClause).maybeSingle();
+          if (stud) {
+            studentFields = {
+              name: stud.name,
+              email: stud.email,
+              mobile: stud.mobile,
+              roll_number: stud.roll_number,
+              course: stud.course,
+            };
+          }
+        }
+      } catch (e) {
+        // ignore student lookup errors
+      }
+    }
+
+    // First attempt: insert registration including student fields (works if DB schema has these columns)
+    let inserted: any = null;
+    let insertError: any = null;
+    try {
+      const payload = {
+        user_id: user.id,
+        event_id: eventId,
+        ticket_id: ticketId,
+        ticket_qr: qrDataUrl,
+        ticket_issued_at: new Date().toISOString(),
+        ...studentFields,
+      };
+      const res = await supabase.from("registrations").insert([payload]).select().single();
+      inserted = res.data;
+      insertError = res.error;
+    } catch (e: any) {
+      insertError = e;
+    }
+
+    // If insert failed (likely because schema doesn't have student columns), retry without student fields
+    if (insertError) {
+      try {
+        const res2 = await supabase
+          .from("registrations")
+          .insert([
+            {
+              user_id: user.id,
+              event_id: eventId,
+              ticket_id: ticketId,
+              ticket_qr: qrDataUrl,
+              ticket_issued_at: new Date().toISOString(),
+            },
+          ])
+          .select()
+          .single();
+        inserted = res2.data;
+        insertError = res2.error;
+      } catch (e: any) {
+        insertError = e;
+      }
+    }
 
     if (insertError) {
       toast({ title: "Registration failed", description: insertError.message, variant: "destructive" });
     } else {
       console.log("Inserted registration:", inserted);
       toast({ title: "Registered!", description: "You have registered for the event." });
-      setRegistrations((prev) => [...prev, eventId]);
+      setRegistrations((prev) => ({ ...prev, [eventId]: { ticket_id: inserted?.ticket_id || ticketId, ticket_qr: inserted?.ticket_qr || qrDataUrl, attended: !!inserted?.attended } }));
       try {
         // notify other parts of the app (Dashboard) to refresh registrations
         window.dispatchEvent(new CustomEvent("registrations:changed", { detail: inserted }));
@@ -164,7 +243,8 @@ const Events = () => {
               if (!updateErr) {
                 console.log("Backfilled QR for registration", regId);
                 // notify dashboard to refresh
-                try { window.dispatchEvent(new CustomEvent("registrations:changed", { detail: { id: regId, ticket_qr: qr } })); } catch {}
+                try { window.dispatchEvent(new CustomEvent("registrations:changed", { detail: { id: regId, ticket_qr: qr } })); } catch { }
+                setRegistrations((prev) => ({ ...prev, [eventId]: { ...(prev[eventId] || {}), ticket_qr: qr } }));
                 return;
               }
             }
@@ -192,7 +272,11 @@ const Events = () => {
       .eq("user_id", user.id)
       .eq("event_id", eventId);
     if (!error) {
-      setRegistrations((prev) => prev.filter((id) => id !== eventId));
+      setRegistrations((prev) => {
+        const copy = { ...prev };
+        delete copy[eventId];
+        return copy;
+      });
       toast({ title: "Registration cancelled." });
     }
   };
@@ -303,10 +387,13 @@ const Events = () => {
                     image={event.image || ""}
                     status={event.status}
                     description={event.description}
-                    onRegister={() => handleRegister(event.id)}
+                    onRegister={(student) => { void handleRegister(event.id, student); }}
                     onCancel={() => handleCancel(event.id)}
-                    isRegistered={registrations.includes(event.id)}
-                    isFirstTime={registrations.length === 0}
+                    isRegistered={Boolean(registrations[event.id])}
+                    isFirstTime={Object.keys(registrations).length === 0}
+                    ticketQr={registrations[event.id]?.ticket_qr}
+                    ticketId={registrations[event.id]?.ticket_id}
+                    attended={!!registrations[event.id]?.attended}
                   />
                 ))}
               </div>

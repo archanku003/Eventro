@@ -61,13 +61,14 @@ const Dashboard = () => {
     // Fetch registrations with explicit ticket fields and event details
     const { data: regData } = await supabase
       .from("registrations")
-      .select("ticket_id, ticket_qr, ticket_issued_at, event:events(*)")
+      .select("ticket_id, ticket_qr, ticket_issued_at, attended, event:events(*)")
       .eq("user_id", user.id);
     // Normalize shape and ensure event is present
     const mapped = (regData || []).map((r: any) => ({
       ticket_id: r.ticket_id,
       ticket_qr: r.ticket_qr,
       ticket_issued_at: r.ticket_issued_at,
+      attended: !!r.attended,
       event: r.event || r["event"],
     }));
     setRegistrations(mapped);
@@ -120,6 +121,7 @@ const Dashboard = () => {
                       description={reg.event.description || ""}
                       ticketQr={reg.ticket_qr}
                       ticketId={reg.ticket_id}
+                      attended={!!reg.attended}
                       status={getEventStatus(reg.event.date, reg.event.time, reg.event.end_time)}
                       isRegistered
                       onCancel={() => handleCancel(reg.event.id)}
