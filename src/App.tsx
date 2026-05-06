@@ -27,7 +27,14 @@ const App = () => {
     supabase.auth.getSession().then(async ({ data }) => {
       const user = data.session?.user;
       if (user) {
-        const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).single();
+        const { data: profile, error } = await supabase
+          .from("users")
+          .select("id, role")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (error) {
+          console.error("Failed to fetch user role:", error);
+        }
         setRole(profile?.role ?? null);
       } else {
         setRole(null);
@@ -37,17 +44,25 @@ const App = () => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const user = session?.user;
       if (user) {
-        supabase.from("users").select("role").eq("id", user.id).single().then(({ data }) => {
-          setRole(data?.role ?? null);
-          setRoleLoaded(true);
-        });
+        supabase
+          .from("users")
+          .select("id, role")
+          .eq("id", user.id)
+          .maybeSingle()
+          .then(({ data, error }) => {
+            if (error) {
+              console.error("Failed to fetch user role on auth state change:", error);
+            }
+            setRole(data?.role ?? null);
+            setRoleLoaded(true);
+          });
       } else {
         setRole(null);
         setRoleLoaded(true);
       }
     });
     return () => {
-      listener.subscription.unsubscribe();
+      listener?.subscription?.unsubscribe();
     };
   }, []);
 

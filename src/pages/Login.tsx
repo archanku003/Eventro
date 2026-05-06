@@ -6,70 +6,133 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { isValidAmityEmail } from "@/lib/validation";
 
 const Login = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const [formData, setFormData] = useState({
-        email: "",
-        password: "",
-        role: "student", // default role
-    });
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        // Authenticate user with Supabase
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: formData.email,
-            password: formData.password,
-        });
-        if (error) {
-            toast({ title: "Login Failed", description: error.message, variant: "destructive" });
+    const [email, setEmail] = useState("");
+    const [otp, setOtp] = useState("");
+    const [isOtpSent, setIsOtpSent] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
+    const handleSendOtp = async () => {
+        const normalizedEmail = email.trim().toLowerCase();
+        setErrors({});
+        setIsOtpSent(false);
+
+        if (!normalizedEmail) {
+            setErrors({ email: "College email is required" });
             return;
         }
 
-        const user = data?.user ?? null;
-        if (!user) {
-            // Unexpected - ensure no session remains
-            await supabase.auth.signOut();
-            toast({ title: "Login Failed", description: "Unable to determine authenticated user.", variant: "destructive" });
+        if (!isValidAmityEmail(normalizedEmail)) {
+            setErrors({ email: "Please use a valid Amity college email" });
             return;
         }
 
-        const userId = user.id;
+        setIsLoading(true);
 
-        // Fetch user profile from custom users table using id
-        const { data: profileData, error: profileError } = await supabase
-            .from("users")
-            .select("id, name, email, role")
-            .eq("id", userId)
-            .maybeSingle();
-
-        if (profileError || !profileData) {
-            // No profile or error — revoke session and fail
-            await supabase.auth.signOut();
-            toast({ title: "Login Failed", description: "User profile not found.", variant: "destructive" });
-            return;
-        }
-
-        const actualRole = String(profileData.role ?? "student").trim().toLowerCase();
-        const requestedRole = String(formData.role ?? "student").trim().toLowerCase();
-
-        if (actualRole !== requestedRole) {
-            // Prevent access when role doesn't match selected role
-            await supabase.auth.signOut();
-            toast({
-                title: "Access Denied",
-                description: `Role mismatch: your account role is '${actualRole}' but you tried to log in as '${requestedRole}'.`,
-                variant: "destructive",
+        try {
+            const { error } = await supabase.auth.signInWithOtp({
+                email: normalizedEmail,
+                options: { shouldCreateUser: false },
             });
+
+            if (error) {
+                if (error.message?.toLowerCase().includes("signups not allowed")) {
+                    setErrors({ email: "Email not found. Please sign up first." });
+                    return;
+                }
+
+                setErrors({ email: error.message || "Failed to send OTP" });
+                return;
+            }
+
+            setIsOtpSent(true);
+            toast({ title: "OTP Sent", description: "Check your email" });
+
+        } catch (err: any) {
+            if (!err?.message?.toLowerCase().includes("signups not allowed")) {
+                console.error("OTP send error:", err);
+            }
+
+            setErrors({ email: err?.message || "Failed to send OTP" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        const normalizedEmail = email.trim().toLowerCase();
+        const cleanOtp = otp.replace(/\D/g, "");
+
+        if (!cleanOtp || cleanOtp.length !== 6) {
+            setErrors({ otp: "OTP must be 6 digits" });
             return;
         }
 
-        // Role matches — proceed
-        const userProfile = profileData as { id: string; name: string; email: string; created_at?: string | null; role?: string | null };
-        toast({ title: "Login Successful!", description: `Welcome back, ${userProfile.name}` });
-        navigate(requestedRole === "admin" ? "/admin-dashboard" : "/dashboard");
+        setIsLoading(true);
+        setErrors({});
+
+        try {
+            const { error, data } = await supabase.auth.verifyOtp({
+                email: normalizedEmail,
+                token: cleanOtp,
+                type: "email",
+            });
+
+            if (error) {
+                setErrors({ otp: error.message || "Invalid or expired OTP" });
+                return;
+            }
+
+            // Successfully verified OTP - user is authenticated in auth.users
+            const user = data?.user;
+            if (!user) {
+                setErrors({ otp: "Login failed. Please try again." });
+                setIsOtpSent(false);
+                return;
+            }
+
+            // Brief delay to allow session sync with the server
+            await new Promise((resolve) => setTimeout(resolve, 300));
+
+            // CRITICAL: ensure this identity exists in public.users (app users)
+            const { data: profileData, error: profileError } = await supabase
+                .from("users")
+                .select("id, name, email")
+                .eq("id", user.id)
+                .maybeSingle();
+
+            if (profileError && profileError.code !== "PGRST116") {
+                // Database error (not "no rows" error)
+                console.error("Profile lookup error:", profileError);
+                setErrors({ otp: "Database error. Please try again." });
+                await supabase.auth.signOut();
+                setIsOtpSent(false);
+                return;
+            }
+
+            if (!profileData) {
+                // Block login: user exists in auth.users but not in public.users
+                await supabase.auth.signOut();
+                setErrors({ otp: "Account not found. Please sign up first." });
+                setIsOtpSent(false);
+                return;
+            }
+
+            // User exists in public.users — successful login
+            toast({ title: "Login Successful!", description: `Welcome back, ${profileData.name}` });
+            navigate("/dashboard");
+        } catch (err: any) {
+            console.error("OTP verification error:", err);
+            setErrors({ otp: err?.message || "Invalid or expired OTP" });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -92,65 +155,76 @@ const Login = () => {
                         </p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-4">
                         <div>
-                            <Label htmlFor="email">Email</Label>
+                            <Label htmlFor="email">College Email</Label>
                             <Input
                                 id="email"
                                 type="email"
-                                value={formData.email}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, email: e.target.value })
-                                }
-                                required
-                                placeholder="your.email@example.com"
+                                value={email}
+                                onChange={(e) => {
+                                    setEmail(e.target.value);
+                                    setErrors({});
+                                    setIsOtpSent(false);
+                                }}
+                                placeholder="student@s.amity.edu"
+                                className={errors.email ? "border-red-500" : ""}
+                                disabled={isOtpSent}
                             />
+                            {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                         </div>
 
-                        <div>
-                            <Label htmlFor="password">Password</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                value={formData.password}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, password: e.target.value })
-                                }
-                                required
-                                placeholder="••••••••"
-                            />
-                        </div>
-
-                        <div>
-                            <Label htmlFor="role">Login as</Label>
-                            <select
-                                id="role"
-                                value={formData.role}
-                                onChange={e => setFormData({ ...formData, role: e.target.value })}
-                                className="w-full border rounded px-2 py-1"
-                                required
+                        {!isOtpSent ? (
+                            <Button
+                                onClick={handleSendOtp}
+                                disabled={isLoading || !email.trim()}
+                                className="w-full bg-gradient-hero hover:opacity-90 transition-opacity"
                             >
-                                <option value="student">Student</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
+                                {isLoading ? "Sending..." : "Send OTP"}
+                            </Button>
+                        ) : (
+                            <>
+                                <div>
+                                    <Label htmlFor="otp">Verification Code</Label>
+                                    <Input
+                                        id="otp"
+                                        type="text"
+                                        value={otp}
+                                        onChange={(e) => {
+                                            setOtp(e.target.value.replace(/\D/g, "").slice(0, 6));
+                                            setErrors({});
+                                        }}
+                                        placeholder="000000"
+                                        maxLength={6}
+                                        className={errors.otp ? "border-red-500" : ""}
+                                    />
+                                    {errors.otp && <p className="text-red-500 text-sm mt-1">{errors.otp}</p>}
+                                </div>
 
-                        <div className="flex items-center justify-between text-sm">
-                            <Link
-                                to="/forgot-password"
-                                className="text-primary hover:underline"
-                            >
-                                Forgot password?
-                            </Link>
-                        </div>
+                                <Button
+                                    onClick={handleVerifyOtp}
+                                    disabled={isLoading || otp.length !== 6}
+                                    className="w-full bg-gradient-hero hover:opacity-90 transition-opacity"
+                                >
+                                    {isLoading ? "Verifying..." : "Sign In"}
+                                </Button>
 
-                        <Button
-                            type="submit"
-                            className="w-full bg-gradient-hero hover:opacity-90 transition-opacity"
-                        >
-                            Sign In
-                        </Button>
-                    </form>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setIsOtpSent(false);
+                                        setOtp("");
+                                        setErrors({});
+                                    }}
+                                    className="w-full"
+                                    disabled={isLoading}
+                                >
+                                    Change Email
+                                </Button>
+                            </>
+                        )}
+                    </div>
 
                     <div className="mt-6 text-center text-sm">
                         <span className="text-muted-foreground">

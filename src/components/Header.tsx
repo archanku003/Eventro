@@ -37,14 +37,20 @@ const Header = () => {
     const fetchProfile = async () => {
       setLoading(true);
       if (user) {
+        console.log("👤 Fetching profile for user:", user.id);
         const { data, error } = await supabase
           .from("users")
           .select("id, name, email, created_at, role")
           .eq("id", user.id)
           .single();
+
+        console.log("📋 Profile fetch result:", { data, error });
+
         if (!error && data) {
+          console.log("✅ Profile found:", data);
           setProfile(data);
         } else {
+          console.log("❌ Profile not found or error:", error?.message);
           setProfile(null);
         }
       } else {

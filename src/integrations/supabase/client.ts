@@ -9,9 +9,22 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 if (typeof window !== 'undefined') {
   try {
     // eslint-disable-next-line no-console
-    console.log('[DEBUG] VITE_SUPABASE_URL:', SUPABASE_URL);
+    console.log('[Supabase] URL:', SUPABASE_URL ? 'SET' : 'MISSING');
     // eslint-disable-next-line no-console
-    console.log('[DEBUG] VITE_SUPABASE_PUBLISHABLE_KEY present:', !!SUPABASE_PUBLISHABLE_KEY);
+    console.log('[Supabase] URL value:', SUPABASE_URL);
+    // eslint-disable-next-line no-console
+    console.log('[Supabase] KEY present:', !!SUPABASE_PUBLISHABLE_KEY);
+    // eslint-disable-next-line no-console
+    console.log('[Supabase] KEY value (first 20 chars):', SUPABASE_PUBLISHABLE_KEY?.substring(0, 20));
+
+    if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+      // eslint-disable-next-line no-console
+      console.error('[Supabase] CRITICAL: Missing environment variables!');
+      // eslint-disable-next-line no-console
+      console.error('[Supabase] VITE_SUPABASE_URL:', SUPABASE_URL);
+      // eslint-disable-next-line no-console
+      console.error('[Supabase] VITE_SUPABASE_PUBLISHABLE_KEY:', SUPABASE_PUBLISHABLE_KEY);
+    }
   } catch (e) {
     // ignore logging failures
   }
@@ -20,4 +33,12 @@ if (typeof window !== 'undefined') {
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+console.log('[Supabase] Creating client...');
 export const supabase = createClient<Database>(SUPABASE_URL as string, SUPABASE_PUBLISHABLE_KEY as string);
+console.log('[Supabase] Client created');
+
+// Expose to window for debugging
+if (typeof window !== 'undefined') {
+  (window as any).supabase = supabase;
+  console.log('[Supabase] Client exposed to window.supabase for debugging');
+}

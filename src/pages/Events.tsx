@@ -172,16 +172,55 @@ const Events = () => {
     // First attempt: insert registration including student fields (works if DB schema has these columns)
     let inserted: any = null;
     let insertError: any = null;
+    // Ensure there is a corresponding row in the `users` table for the authenticated user
+    // registrations.user_id references public.users.id (FK). If a profile row is missing
+    // inserting a registration with user.id will violate the FK. Create a minimal profile
+    // record if it does not exist.
+    let profileExists = false;
+    try {
+      const { data: existingProfile, error: profileErr } = await supabase
+        .from("users")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profileErr) {
+        // non-fatal - we'll still try insertion and surface errors
+        console.warn("Failed to check users profile before registration:", profileErr.message || profileErr);
+      } else if (existingProfile) {
+        profileExists = true;
+      } else {
+        // attempt to create a minimal profile; this may fail due to RLS/permissions
+        const profileInsert = {
+          id: user.id,
+          email: (user.email as string) || "",
+          name: (studentFields && (studentFields.name as string)) || (user.user_metadata as any)?.name || (user.email as string) || "",
+        };
+        const { error: createErr } = await supabase.from("users").insert([profileInsert]);
+        if (createErr) {
+          // warn but continue - fallback below will avoid FK violation
+          console.warn("Failed to create users profile before registration:", createErr.message || createErr);
+        } else {
+          profileExists = true;
+        }
+      }
+    } catch (e) {
+      // ignore profile creation errors here - they will be surfaced when attempting registration
+      console.warn("Unexpected error while ensuring user profile for registration", e);
+    }
     try {
       const payload = {
-        user_id: user.id,
+        // only set user_id when a corresponding users profile exists; otherwise leave null to avoid FK violation
+        user_id: profileExists ? user.id : null,
         event_id: eventId,
         ticket_id: ticketId,
         ticket_qr: qrDataUrl,
         ticket_issued_at: new Date().toISOString(),
-        ...studentFields,
       };
-      const res = await supabase.from("registrations").insert([payload]).select().single();
+      const res = await supabase
+        .from("registrations")
+        .insert([payload])
+        .select("id, user_id, event_id, ticket_id, ticket_qr, ticket_issued_at, registered_at, attended")
+        .single();
       inserted = res.data;
       insertError = res.error;
     } catch (e: any) {
@@ -190,19 +229,22 @@ const Events = () => {
 
     // If insert failed (likely because schema doesn't have student columns), retry without student fields
     if (insertError) {
+      // If a profile doesn't exist and we couldn't create it, do not retry with user.id
+      // because that will trigger the foreign key violation. Instead, retry without student
+      // fields but preserve the same user_id null logic.
       try {
         const res2 = await supabase
           .from("registrations")
           .insert([
             {
-              user_id: user.id,
+              user_id: profileExists ? user.id : null,
               event_id: eventId,
               ticket_id: ticketId,
               ticket_qr: qrDataUrl,
               ticket_issued_at: new Date().toISOString(),
             },
           ])
-          .select()
+          .select("id, user_id, event_id, ticket_id, ticket_qr, ticket_issued_at, registered_at, attended")
           .single();
         inserted = res2.data;
         insertError = res2.error;

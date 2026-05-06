@@ -71,12 +71,33 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log("[AdminDashboard] useEffect mounted - starting fetch");
+    setLoading(true);
+
     const fetchEvents = async () => {
-      const { data, error } = await supabase.from("events").select("*");
-      if (error) setError(error.message);
-      setEvents(data || []);
-      setLoading(false);
+      try {
+        console.log("[AdminDashboard] Fetching events from Supabase...");
+        const { data, error: dbError } = await supabase.from("events").select("*");
+
+        if (dbError) {
+          console.error("[AdminDashboard] DB Error:", dbError);
+          setError(dbError.message);
+          setEvents([]);
+        } else {
+          console.log("[AdminDashboard] Events fetched successfully:", data?.length || 0, "events");
+          setEvents(data || []);
+          setError(null);
+        }
+      } catch (err: any) {
+        console.error("[AdminDashboard] Exception during fetch:", err);
+        setError(err?.message || "Failed to fetch events");
+        setEvents([]);
+      } finally {
+        console.log("[AdminDashboard] Setting loading to false");
+        setLoading(false);
+      }
     };
+
     fetchEvents();
   }, []);
 
@@ -116,10 +137,18 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-white">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold mb-6">Admin Event Management</h1>
+
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 border border-red-500 rounded text-red-700">
+            <p className="font-semibold">Error:</p>
+            <p>{error}</p>
+          </div>
+        )}
+
         <div className="mb-6 flex gap-3">
           <Button onClick={() => setAddOpen(true)} className="bg-gradient-hero">
             Add Event

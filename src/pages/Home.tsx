@@ -110,17 +110,39 @@ const Home = () => {
       });
   }, []);
 
-  // Registration handler
+  // Registration handler with profile check to avoid FK violations
   const handleRegister = async (eventId: string) => {
     if (!user) {
       toast({ title: "Please log in to register for events." });
       return;
     }
-    const { error } = await supabase
-      .from("registrations")
-      .insert([
-        { user_id: user.id, event_id: eventId }
-      ] as any);
+
+    let profileExists = false;
+    try {
+      const { data: existingProfile, error: profileErr } = await supabase
+        .from("users")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profileErr) {
+        console.warn("Failed to check users profile before registration:", profileErr.message || profileErr);
+      } else if (existingProfile) {
+        profileExists = true;
+      } else {
+        const profileInsert = { id: user.id, email: user.email || "", name: (user.user_metadata as any)?.name || user.email || "" };
+        const { error: createErr } = await supabase.from("users").insert([profileInsert]);
+        if (createErr) {
+          console.warn("Failed to create users profile before registration:", createErr.message || createErr);
+        } else {
+          profileExists = true;
+        }
+      }
+    } catch (e) {
+      console.warn("Unexpected error while ensuring user profile for registration", e);
+    }
+
+    const payload = { user_id: profileExists ? user.id : null, event_id: eventId } as any;
+    const { error } = await supabase.from("registrations").insert([payload]);
     if (error) {
       toast({ title: "Registration failed", description: error.message, variant: "destructive" });
     } else {

@@ -151,6 +151,7 @@ const Attendees: React.FC = () => {
 
           let mapped = (data || []).map((r: any) => ({
             id: r.id,
+            user_id: r.user_id,
             name: r.name || r.user_name || (r.user && r.user.name) || null,
             email: r.email || r.user_email || (r.user && r.user.email) || null,
             mobile: r.mobile || r.phone || null,
@@ -161,33 +162,32 @@ const Attendees: React.FC = () => {
             raw: r,
           }));
 
-          // If year is missing for some rows, try to fetch from `students` table using roll_number or email
-          const needYear = mapped.filter((m: any) => !m.year && (m.roll_number || m.email));
-          if (needYear.length > 0) {
-            const rollNumbers = Array.from(new Set(needYear.map((x: any) => x.roll_number).filter(Boolean)));
-            const emails = Array.from(new Set(needYear.map((x: any) => x.email).filter(Boolean)));
-            const studentMapByRoll: Record<string, any> = {};
-            const studentMapByEmail: Record<string, any> = {};
+          // Fetch student details for each user_id to get mobile, course, year, roll_number
+          const userIds = Array.from(new Set(mapped.map((m: any) => m.user_id).filter(Boolean)));
+          const studentMap: Record<string, any> = {};
+
+          if (userIds.length > 0) {
             try {
-              if (rollNumbers.length > 0) {
-                const { data: studs } = await supabase.from("students").select("*").in("roll_number", rollNumbers);
-                (studs || []).forEach((s: any) => { if (s.roll_number) studentMapByRoll[s.roll_number] = s; });
-              }
-              if (emails.length > 0) {
-                const { data: studs2 } = await supabase.from("students").select("*").in("email", emails);
-                (studs2 || []).forEach((s: any) => { if (s.email) studentMapByEmail[s.email] = s; });
-              }
+              // Fetch students by their id (which equals user_id)
+              const { data: students } = await supabase.from("students").select("*").in("id", userIds);
+              (students || []).forEach((s: any) => {
+                if (s.id) studentMap[s.id] = s;
+              });
             } catch (e) {
-              console.warn("Failed to fetch students for year resolution", e);
+              console.warn("Failed to fetch students by user_id", e);
             }
 
+            // Enrich mapped data with student details
             mapped = mapped.map((m: any) => {
-              if (!m.year) {
-                const s = (m.roll_number && studentMapByRoll[m.roll_number]) || (m.email && studentMapByEmail[m.email]);
-                if (s) {
-                  const y = resolveYear(s, s);
-                  if (y) m.year = y;
-                }
+              const student = studentMap[m.user_id];
+              if (student) {
+                return {
+                  ...m,
+                  mobile: m.mobile || student.mobile || null,
+                  roll_number: m.roll_number || student.roll_number || null,
+                  course: m.course || student.course || null,
+                  year: m.year || resolveYear(student, null) || null,
+                };
               }
               return m;
             });
